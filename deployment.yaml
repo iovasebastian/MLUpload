@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dockerfile-onnx-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dockerfile-onnx
+  template:
+    metadata:
+      labels:
+        app: dockerfile-onnx
+    spec:
+      containers:
+        - name: dockerfile-onnx
+          image: dockerfiles.azurecr.io/dockerfile.onnx:latest
+          ports:
+            - containerPort: 8000
