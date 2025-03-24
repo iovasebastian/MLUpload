@@ -5,6 +5,7 @@ import os
 import pickle
 import onnxruntime as ort
 import mysql
+import sys
 # 🔹 Azure Storage Credentials
 AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=sebastianblobml;AccountKey=mVq1SpKr/Ezd3odD9iMEROZIcwlK+i/9xz8Pzn5AhhTfTg073jH9aZy01Nr9IxMK5s+yttHVYW3q+ASt6VrnFg==;EndpointSuffix=core.windows.net"
 CONTAINER_NAME = "blobcontainer"
@@ -97,9 +98,25 @@ def list_blobs_per_user(user: dict = Depends(authHandler.authWrapper)):
             existing_blobs.append(blob_name)
     return existing_blobs
 
+def download_blob_to_file(blob_name: str, destination_path: str):
+    blob_client = container_client.get_blob_client(blob_name)
+
+    if not blob_client.exists():
+        print(f"❌ File '{blob_name}' not found in Azure Blob Storage.")
+        return False
+
+    print(f"📥 Downloading '{blob_name}' from Azure Blob Storage...")
+    blob_data = blob_client.download_blob().readall()
+
+    with open(destination_path, "wb") as f:
+        f.write(blob_data)
+
+    print(f"✅ Downloaded to: {destination_path}")
+    return True
+
 if __name__ == "__main__":
     import sys
-    model_name = sys.argv[1]  # e.g., "model.onnx"
+    model_name = sys.argv[1]  # e.g., test2.onnx
     contents = download_blob(model_name)
     if contents:
         with open(model_name, "wb") as f:
@@ -107,4 +124,5 @@ if __name__ == "__main__":
         print(f"✅ {model_name} downloaded successfully.")
     else:
         print(f"❌ Failed to download {model_name}")
+
 
