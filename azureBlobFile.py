@@ -96,3 +96,15 @@ def list_blobs_per_user(user: dict = Depends(authHandler.authWrapper)):
         if container_client.get_blob_client(blob_name).exists():
             existing_blobs.append(blob_name)
     return existing_blobs
+
+if __name__ == "__main__":
+    import sys
+    model_name = sys.argv[1]  # e.g., "model.onnx"
+    contents = download_blob(model_name)
+    if contents:
+        with open(model_name, "wb") as f:
+            f.write(contents)
+        print(f"✅ {model_name} downloaded successfully.")
+    else:
+        print(f"❌ Failed to download {model_name}")
+
