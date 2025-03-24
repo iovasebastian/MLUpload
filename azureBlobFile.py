@@ -116,16 +116,21 @@ def download_blob_to_file(blob_name: str, destination_path: str):
 
 if __name__ == "__main__":
     import sys
+    import os
+
     model_name = sys.argv[1]  # e.g., "test2.onnx"
     contents = download_blob(model_name)
-    
-    save_path = os.path.join(os.getcwd(), model_name)
+
+    save_path = os.path.join(os.getcwd(), model_name)  # Absolute path
+    print(f"Saving model to: {save_path}")
+
     if contents:
         with open(save_path, "wb") as f:
             f.write(contents)
-        print(f"✅ {model_name} downloaded successfully to {save_path}.")
+        print(f"✅ {model_name} downloaded successfully and saved to {save_path}")
     else:
         print(f"❌ Failed to download {model_name}")
+
 
 
 
