@@ -17,7 +17,7 @@ cursor = conn.cursor(dictionary=True)
 
 cursor.execute("""
     UPDATE models
-    SET ip_address = %s
+    SET modelIp = %s
     WHERE modelName = %s
 """, (IP, MODEL_NAME))
 
