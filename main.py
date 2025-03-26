@@ -17,7 +17,7 @@ import onnxruntime as ort
 import numpy as np
 
 app = FastAPI()
-authHandler = AuthHandler()
+#authHandler = AuthHandler()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -81,17 +81,18 @@ def login(user: UserLogin):
             raise HTTPException(status_code=404, detail=f"User {user.email} not found")
 
         if verifyPassword(user.password, userFound["password"]):
-            token = authHandler.encodeToken(userFound["id"], userFound["role"])
-            response = JSONResponse(content={"id": userFound["id"], "role": userFound["role"], "access_token": token })
-            response.set_cookie(
-                key="access_token",
-                value=token,
-                httponly=True,
-                secure=False,
-                samesite="Lax"
-            )
+            #token = authHandler.encodeToken(userFound["id"], userFound["role"])
+            #response = JSONResponse(content={"id": userFound["id"], "role": userFound["role"], "access_token": token })
+            #response.set_cookie(
+               # key="access_token",
+               # value=token,
+               # httponly=True,
+               # secure=False,
+               # samesite="Lax"
+            #)
 
-            return response
+            #return response
+            print('')
         else:
             raise HTTPException(status_code=401, detail="Wrong password")
     
@@ -129,17 +130,19 @@ def logout():
     return response
 
 @app.get("/check-admin")
-def check_admin(user: dict = Depends(authHandler.authWrapper)):
-    if not user:  # ✅ Ensure that user is actually present
-        return JSONResponse(content={"detail": "Not authenticated"}, status_code=403)
-
-    if user["role"] != "admin":  # ✅ Ensure only admins can access
-        return JSONResponse(content={"detail": "Access denied, not an admin"}, status_code=403)
-
-    return {"message": "User is an admin", "id": user["id"], "role": user["role"]}
+#def check_admin(user: dict = Depends(authHandler.authWrapper)):
+ #   if not user:  # ✅ Ensure that user is actually present
+#        return JSONResponse(content={"detail": "Not authenticated"}, status_code=403)
+#
+#    if user["role"] != "admin":  # ✅ Ensure only admins can access
+#        return JSONResponse(content={"detail": "Access denied, not an admin"}, status_code=403)
+#
+ #   return {"message": "User is an admin", "id": user["id"], "role": user["role"]}
 
 @app.get("/getIp")
-def getIp(modelName:str, user: dict = Depends(authHandler.authWrapper)):
+def getIp(modelName:str, 
+          #user: dict = Depends(authHandler.authWrapper)
+    ):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
