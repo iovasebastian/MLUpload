@@ -17,7 +17,11 @@ app = FastAPI()
 authHandler = AuthHandler()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://quick-cougars-obey.loca.lt"],  # ✅ Replace with your frontend URL
+    allow_origins=[
+        "https://legal-cooks-attend.loca.lt",  # 👈 exact tunnel URL
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],  # ✅ Replace with your frontend URL
     allow_credentials=True,  # ✅ Required for cookies (withCredentials: true)
     allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PUT"],  # ✅ Only allow necessary methods
     allow_headers=["Authorization", "Content-Type"],  # ✅ Allow necessary headers
@@ -80,7 +84,7 @@ def login(user: UserLogin):
                 key="access_token",
                 value=token,
                 httponly=True, 
-                secure=True,  
+                secure=False,  
                 samesite="None"
             )
             return response
