@@ -130,11 +130,24 @@ def check_admin(user: dict = Depends(authHandler.authWrapper)):
 
     return {"message": "User is an admin", "id": user["id"], "role": user["role"]}
 
+@app.get("/getIp")
+def getIp(modelName:str, user: dict = Depends(authHandler.authWrapper)):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT modelIp FROM models WHERE modelName = %s", (modelName,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Model not found or IP not available")
 
+        return {"ip": result["modelIp"]}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-
-
-
+    finally:
+        cursor.close()
+        conn.close()
 
 #AZURE CRUD
 
