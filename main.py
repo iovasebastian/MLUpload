@@ -87,7 +87,7 @@ def login(user: UserLogin):
                 key="access_token",
                 value=token,
                 httponly=True, 
-                secure=False,  
+                secure=True,  
                 samesite="None"
             )
             return response
@@ -199,7 +199,7 @@ def delete_file(file_name: str):
     
 #Prediction with onxx and pickle
 @app.post("/predict/{model_name}")
-async def predict(model_name: str, input_data: PredictionInput, user: dict = Depends(authHandler.authWrapper)):
+async def predict(model_name: str, input_data: PredictionInput):
     """Run prediction using the uploaded model"""
     try:
         model = load_model(model_name)
