@@ -22,8 +22,7 @@ app.add_middleware(
     allow_origins=[
         "https://legal-cooks-attend.loca.lt",  # 👈 exact tunnel URL
         "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://134.112.0.15"
+        "http://127.0.0.1:3000"
     ],  # ✅ Replace with your frontend URL
     allow_credentials=True,  # ✅ Required for cookies (withCredentials: true)
     allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PUT"],  # ✅ Only allow necessary methods
