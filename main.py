@@ -17,7 +17,8 @@ app = FastAPI()
 authHandler = AuthHandler()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ✅ Replace with your frontend URL  # ✅ Required for cookies (withCredentials: true)
+    allow_origins=["https://legal-cooks-attend.loca.lt/"],  # ✅ Replace with your frontend URL
+    allow_credentials=True,  # ✅ Required for cookies (withCredentials: true)
     allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PUT"],  # ✅ Only allow necessary methods
     allow_headers=["Authorization", "Content-Type"],  # ✅ Allow necessary headers
 )
