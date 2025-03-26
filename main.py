@@ -11,6 +11,7 @@ from jwtFile import AuthHandler
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from fastapi import Header
 import json
 import onnxruntime as ort
 import numpy as np
@@ -85,10 +86,11 @@ def login(user: UserLogin):
             response.set_cookie(
                 key="access_token",
                 value=token,
-                httponly=True, 
-                secure=False,  
+                httponly=True,
+                secure=False,
                 samesite="Lax"
             )
+
             return response
         else:
             raise HTTPException(status_code=401, detail="Wrong password")
@@ -198,7 +200,7 @@ def delete_file(file_name: str):
     
 #Prediction with onxx and pickle
 @app.post("/predict/{model_name}")
-async def predict(model_name: str, input_data: PredictionInput):
+async def predict(model_name: str, input_data: PredictionInput, authorization: str = Header(default=None)):
     """Run prediction using the uploaded model"""
     try:
         model = load_model(model_name)
