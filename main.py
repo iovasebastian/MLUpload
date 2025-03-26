@@ -86,8 +86,8 @@ def login(user: UserLogin):
                 key="access_token",
                 value=token,
                 httponly=True, 
-                secure=True,  
-                samesite="None"
+                secure=False,  
+                samesite="Lax"
             )
             return response
         else:
