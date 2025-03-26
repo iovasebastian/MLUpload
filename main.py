@@ -9,6 +9,8 @@ from datetime import datetime
 from passhash import hashPassword, verifyPassword
 from jwtFile import AuthHandler
 from fastapi.security import OAuth2PasswordBearer
+from fastapi import Request
+from fastapi.responses import JSONResponse
 import json
 import onnxruntime as ort
 import numpy as np
@@ -156,7 +158,7 @@ def getIp(modelName:str, user: dict = Depends(authHandler.authWrapper)):
 
 @app.get("/debug-token")
 def debug_token(request: Request):
-    return request.cookies
+    return JSONResponse(content=request.cookies)
 
 #AZURE CRUD
 
