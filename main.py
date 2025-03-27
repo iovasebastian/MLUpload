@@ -18,7 +18,7 @@ import numpy as np
 import logging
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
-
+logger.info("🎉 New version of main.py is running!")
 app = FastAPI()
 authHandler = AuthHandler()
 app.add_middleware(
