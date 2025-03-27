@@ -31,7 +31,9 @@ class AuthHandler():
 
 
     def authWrapper(self, request: Request):
+        print("🔥 authWrapper triggered")
         auth = request.headers.get("Authorization")
+        print("🔑 Header received:", auth)
         if not auth or not auth.startswith("Bearer "):
             raise HTTPException(status_code=403, detail="Not authenticated")
         token = auth.split("Bearer ")[1]
