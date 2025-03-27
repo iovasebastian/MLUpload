@@ -156,9 +156,12 @@ def getIp(modelName:str, user: dict = Depends(authHandler.authWrapper)):
         cursor.close()
         conn.close()
 
-@app.get("/debug-token")
-def debug_token(request: Request):
-    return JSONResponse(content=request.cookies)
+@app.get("/debug-token-header")
+def debug_token_header(request: Request):
+    return {
+        "auth_header": request.headers.get("Authorization"),
+        "token_from_header": request.headers.get("Authorization").split("Bearer ")[1] if request.headers.get("Authorization") else None
+    }
 
 #AZURE CRUD
 
