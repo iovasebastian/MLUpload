@@ -1,5 +1,5 @@
 import jwt
-from fastapi import HTTPException, Security, Request
+from fastapi import HTTPException, Security, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from datetime import datetime, timedelta, timezone
 
@@ -31,15 +31,10 @@ class AuthHandler():
 
 
     def authWrapper(self, request: Request):
-        """Extracts token from cookies instead of Authorization header"""
-        token = request.cookies.get("access_token")
-
-        if not token:
+        auth = request.headers.get("Authorization")
+        if not auth or not auth.startswith("Bearer "):
             raise HTTPException(status_code=403, detail="Not authenticated")
-
-        if token.startswith("Bearer "):  # ✅ Remove "Bearer " if present
-            token = token.split("Bearer ")[1]
-
+        token = auth.split("Bearer ")[1]
         return self.decodeToken(token)
 
 
