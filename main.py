@@ -201,7 +201,7 @@ def delete_file(file_name: str):
         raise HTTPException(status_code=404, detail="File not found")
     
 #Prediction with onxx and pickle
-@app.post("/predict/{model_name}")
+@app.post("/predict/{model_name:path}")
 async def predict(model_name: str, input_data: PredictionInput, user: dict = Depends(authHandler.authWrapper)):
     """Run prediction using the uploaded model"""
     print("🔐 Authenticated user:", user)
