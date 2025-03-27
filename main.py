@@ -15,6 +15,9 @@ from fastapi import Header
 import json
 import onnxruntime as ort
 import numpy as np
+import logging
+logger = logging.getLogger("uvicorn")
+logger.setLevel(logging.INFO)
 
 app = FastAPI()
 authHandler = AuthHandler()
@@ -204,7 +207,8 @@ def delete_file(file_name: str):
 @app.post("/predict/{model_name:path}")
 async def predict(model_name: str, input_data: PredictionInput, user: dict = Depends(authHandler.authWrapper)):
     """Run prediction using the uploaded model"""
-    print("🔐 Authenticated user:", user)
+    logger.info(f"🔥 Predict called with model: {model_name}")
+    logger.info(f"🔐 Authenticated user: {user}")
     try:
         model = load_model(model_name)
 
