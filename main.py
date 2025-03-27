@@ -204,6 +204,7 @@ def delete_file(file_name: str):
 @app.post("/predict/{model_name}")
 async def predict(model_name: str, input_data: PredictionInput, user: dict = Depends(authHandler.authWrapper)):
     """Run prediction using the uploaded model"""
+    print("🔐 Authenticated user:", user)
     try:
         model = load_model(model_name)
 
