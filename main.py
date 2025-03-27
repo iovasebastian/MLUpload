@@ -261,6 +261,7 @@ async def predict(model_name: str, input_data: PredictionInput, user: dict = Dep
     
 @app.get("/predict/{model_name}")
 async def getModelInput(model_name: str):
+    logger.info(f"🔥 Predict called with model: {model_name}")
     try:
         model = load_model(model_name)  # Now returns `InferenceSession`
         input_details = [{"name": input.name, "shape": input.shape} for input in model.get_inputs()]
