@@ -202,7 +202,7 @@ def delete_file(file_name: str):
     
 #Prediction with onxx and pickle
 @app.post("/predict/{model_name}")
-async def predict(model_name: str, input_data: PredictionInput):
+async def predict(model_name: str, input_data: PredictionInput, user: dict = Depends(authHandler.authWrapper)):
     """Run prediction using the uploaded model"""
     try:
         model = load_model(model_name)
