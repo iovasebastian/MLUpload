@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 import os
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
-logger.info("🎉 New version of main.py is running!")
+logger.info("NEW MODEL !!!!!!!!!!");
 app = FastAPI()
 authHandler = AuthHandler()
 app.add_middleware(
@@ -263,8 +263,6 @@ def delete_file(file_name: str):
 @app.post("/predict/{model_name:path}")
 async def predict(model_name: str, input_data: PredictionInput, user: dict = Depends(authHandler.authWrapper)):
     """Run prediction using the uploaded model"""
-    logger.info(f"🔥 Predict called with model: {model_name}")
-    logger.info(f"🔐 Authenticated user: {user}")
     try:
         model = load_model(model_name)
 
@@ -317,7 +315,6 @@ async def predict(model_name: str, input_data: PredictionInput, user: dict = Dep
     
 @app.get("/predict/{model_name}")
 async def get_model_input(model_name: str):
-    logger.info(f"🔥 Predict called with model: {model_name}")
     try:
         model = load_model(model_name)  # loads the file from Blob
         extension = os.path.splitext(model_name)[-1].lower()
