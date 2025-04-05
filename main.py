@@ -316,34 +316,39 @@ async def predict(model_name: str, input_data: PredictionInput, user: dict = Dep
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.get("/predict/{model_name}")
-async def getModelInput(model_name: str):
+async def get_model_input(model_name: str):
     logger.info(f"🔥 Predict called with model: {model_name}")
     try:
-        model = load_model(model_name)  # Load either ONNX or Pickle model
+        model = load_model(model_name)  # loads the file from Blob
+        extension = os.path.splitext(model_name)[-1].lower()
 
-        if model_name.endswith(".onnx"):
+        if extension == ".onnx":
             # Handle ONNX model
             input_details = [{"name": input.name, "shape": input.shape} for input in model.get_inputs()]
             output_details = [{"name": output.name, "shape": output.shape} for output in model.get_outputs()]
+
             return {
-                "model_type": "onnx",
+                "type": "onnx",
                 "inputs": input_details,
                 "outputs": output_details
             }
 
-        elif model_name.endswith(".pkl"):
-            # Handle Pickle model (sklearn model)
-            # Example: for scikit-learn trees, etc
-            input_features = model.feature_names_in_.tolist() if hasattr(model, "feature_names_in_") else []
+        elif extension == ".pkl":
+            # Handle Pickle model
+            input_features = getattr(model, "feature_names_in_", None)
+
+            if input_features is None:
+                raise Exception("Cannot determine input features for this pickle model.")
+
             return {
-                "model_type": "pkl",
-                "input_features": input_features
+                "type": "pickle",
+                "inputs": list(input_features),
+                "outputs": [str(model.__class__)]
             }
 
         else:
-            raise HTTPException(status_code=400, detail="Unsupported model format.")
+            raise Exception(f"Unsupported model extension: {extension}")
 
     except Exception as e:
-        logger.error(f"❌ Error in getModelInput: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error extracting model details: {str(e)}")
     
