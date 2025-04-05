@@ -98,6 +98,20 @@ def list_blobs_per_user(user: dict = Depends(authHandler.authWrapper)):
             existing_blobs.append(blob_name)
     return existing_blobs
 
+def list_blobs_admin(user: dict = Depends(authHandler.authWrapper)):
+    print(user)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT modelName FROM models")
+    blob_names = [row["modelName"] for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    existing_blobs = []
+    for blob_name in blob_names:
+        if container_client.get_blob_client(blob_name).exists():
+            existing_blobs.append(blob_name)
+    return existing_blobs
+
 def download_blob_to_file(blob_name: str, destination_path: str):
     blob_client = container_client.get_blob_client(blob_name)
 

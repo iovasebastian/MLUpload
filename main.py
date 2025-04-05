@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException, Depends, Request, Response
+from fastapi import FastAPI, HTTPException, Depends, Request, Response, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import mysql.connector
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import UploadFile, File
-from azureBlobFile import upload_file_to_blob, list_blobs, download_blob, delete_blob, load_model, list_blobs_per_user
+from azureBlobFile import list_blobs_admin, upload_file_to_blob, list_blobs, download_blob, delete_blob, load_model, list_blobs_per_user
 from datetime import datetime
 from passhash import hashPassword, verifyPassword
 from jwtFile import AuthHandler
@@ -12,10 +12,14 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi import Header
+import subprocess
+import requests
 import json
 import onnxruntime as ort
 import numpy as np
 import logging
+from dotenv import load_dotenv
+import os
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
 logger.info("🎉 New version of main.py is running!")
@@ -32,6 +36,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PUT"],  # ✅ Only allow necessary methods
     allow_headers=["Authorization", "Content-Type"],  # ✅ Allow necessary headers
 )
+
+JENKINS_URL = os.getenv("JENKINS_URL")
+JENKINS_USERNAME = os.getenv("JENKINS_USERNAME")
+JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 
 def get_db_connection():
     return mysql.connector.connect(
@@ -115,7 +123,7 @@ def addMetaData(metaData: MetaDataFile):
         return {"message": "Metadata added successfully!"}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail="Failed adding!")
+        raise HTTPException(status_code=500, detail=f"Failed adding!{str(e)}")
 
 @app.post("/logout")
 def logout():
@@ -166,6 +174,38 @@ def debug_token_header(request: Request):
         "token_from_header": request.headers.get("Authorization").split("Bearer ")[1] if request.headers.get("Authorization") else None
     }
 
+@app.get("/jenkins/status/{job_name}")
+def get_jenkins_status(job_name: str):
+    try:
+        url = f"http://localhost:8080/job/{job_name}/lastBuild/wfapi/describe"
+        response = requests.get(url, auth=(JENKINS_USERNAME, JENKINS_TOKEN))
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Jenkins error: {str(e)}")
+    
+@app.post("/deploy")
+def deploy(model: str = Query(...), type: str = Query(...)):
+    try:
+        response = requests.post(
+            JENKINS_URL,
+            params={
+                "MODEL_NAME": model,
+                "MODEL_TYPE": type
+            },
+            auth=(JENKINS_USERNAME, JENKINS_TOKEN)
+        )
+
+        if response.status_code == 201:
+            return {"message": "Jenkins job triggered successfully"}
+        else:
+            return JSONResponse(
+                status_code=response.status_code,
+                content={"error": response.text}
+            )
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 #AZURE CRUD
 
 @app.post("/upload/")
@@ -176,9 +216,15 @@ async def upload_file(file: UploadFile = File(...)):
 
 # 🔹 List Files in Azure Blob Storage
 @app.get("/list/")
-def list_files(userId):
+def list_files(userId, user: dict = Depends(authHandler.authWrapper)):
     """API function that returns only the user's files."""
     user_blobs = list_blobs_per_user(userId)
+    return {"files": user_blobs}
+
+@app.get("/listAdmin/")
+def list_files(userId, user: dict = Depends(authHandler.authWrapper)):
+    """API function that returns only the user's files."""
+    user_blobs = list_blobs_admin(userId)
     return {"files": user_blobs}
 
 #def list_files():
@@ -199,7 +245,17 @@ def download_file(file_name: str):
 def delete_file(file_name: str):
     try:
         message = delete_blob(file_name)
-        return {"message": message}
+        model_name = file_name.split('.')[0].lower()
+        subprocess.run(["kubectl", "delete", "deployment", f"{model_name}-deployment"], check=False)
+        subprocess.run(["kubectl", "delete", "svc", f"{model_name}-service"], check=False)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = "DELETE FROM models WHERE modelName = %s"
+        cursor.execute(query, (file_name,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"message": message, "dbmessage": f"✅ DB entry for '{model_name}' deleted."}
     except Exception:
         raise HTTPException(status_code=404, detail="File not found")
     
@@ -263,17 +319,31 @@ async def predict(model_name: str, input_data: PredictionInput, user: dict = Dep
 async def getModelInput(model_name: str):
     logger.info(f"🔥 Predict called with model: {model_name}")
     try:
-        model = load_model(model_name)  # Now returns `InferenceSession`
-        input_details = [{"name": input.name, "shape": input.shape} for input in model.get_inputs()]
+        model = load_model(model_name)  # Load either ONNX or Pickle model
 
-        # ✅ Extract Outputs
-        output_details = [{"name": output.name, "shape": output.shape} for output in model.get_outputs()]
+        if model_name.endswith(".onnx"):
+            # Handle ONNX model
+            input_details = [{"name": input.name, "shape": input.shape} for input in model.get_inputs()]
+            output_details = [{"name": output.name, "shape": output.shape} for output in model.get_outputs()]
+            return {
+                "model_type": "onnx",
+                "inputs": input_details,
+                "outputs": output_details
+            }
 
-        return {
-            "inputs": input_details,
-            "outputs": output_details
-        }
+        elif model_name.endswith(".pkl"):
+            # Handle Pickle model (sklearn model)
+            # Example: for scikit-learn trees, etc
+            input_features = model.feature_names_in_.tolist() if hasattr(model, "feature_names_in_") else []
+            return {
+                "model_type": "pkl",
+                "input_features": input_features
+            }
+
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported model format.")
 
     except Exception as e:
+        logger.error(f"❌ Error in getModelInput: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error extracting model details: {str(e)}")
     

@@ -10,7 +10,7 @@ class AuthHandler():
     def encodeToken(self, userId, role):
         now = datetime.now(timezone.utc)
         payload = {
-            'exp': now + timedelta(minutes = 60),  # ✅ Token lasts 1 hour
+            'exp': now + timedelta(minutes = 120),  # ✅ Token lasts 1 hour
             'iat': now,
             'sub': str(userId),
             'role': role
