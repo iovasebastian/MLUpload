@@ -20,6 +20,7 @@ import numpy as np
 import logging
 from dotenv import load_dotenv
 import os
+load_dotenv()
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
 logger.info("NEW MODEL !!!!!!!!!!")
@@ -39,13 +40,17 @@ app.add_middleware(
 JENKINS_URL = os.getenv("JENKINS_URL")
 JENKINS_USERNAME = os.getenv("JENKINS_USERNAME")
 JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
+SQL_HOST = os.getenv("SQL_HOST")
+SQL_USER = os.getenv("SQL_USER")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+SQL_DATABASE = os.getenv("SQL_DATABASE")
 
 def get_db_connection():
     return mysql.connector.connect(
-        host="127.0.0.1",
-        user="root",
-        password="1234",
-        database="db1"
+        host= SQL_HOST,
+        user= SQL_USER,
+        password= SQL_PASSWORD,
+        database= SQL_DATABASE
     )
 
 class User(BaseModel):
