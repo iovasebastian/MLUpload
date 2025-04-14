@@ -9,7 +9,7 @@ from datetime import datetime
 from passhash import hashPassword, verifyPassword
 from jwtFile import AuthHandler
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import Request
+from fastapi import Request, Path
 from fastapi.responses import JSONResponse
 from fastapi import Header
 import subprocess
@@ -22,19 +22,18 @@ from dotenv import load_dotenv
 import os
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
-logger.info("NEW MODEL !!!!!!!!!!");
+logger.info("NEW MODEL !!!!!!!!!!")
 app = FastAPI()
 authHandler = AuthHandler()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://legal-cooks-attend.loca.lt",  # 👈 exact tunnel URL
         "http://localhost:3000",
         "http://127.0.0.1:3000"
-    ],  # ✅ Replace with your frontend URL
-    allow_credentials=True,  # ✅ Required for cookies (withCredentials: true)
-    allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PUT"],  # ✅ Only allow necessary methods
-    allow_headers=["Authorization", "Content-Type"],  # ✅ Allow necessary headers
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PUT"], 
+    allow_headers=["Authorization", "Content-Type"], 
 )
 
 JENKINS_URL = os.getenv("JENKINS_URL")
@@ -128,11 +127,10 @@ def addMetaData(metaData: MetaDataFile):
 @app.post("/logout")
 def logout():
     response = JSONResponse(content={"message": "Logged out successfully!"})
-    # ✅ Remove token from cookies
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        secure=True,  # Change to True for production with HTTPS
+        secure=True, 
         samesite="None"
     )
 
@@ -140,14 +138,27 @@ def logout():
 
 @app.get("/check-admin")
 def check_admin(user: dict = Depends(authHandler.authWrapper)):
-    if not user:  # ✅ Ensure that user is actually present
+    if not user: 
         return JSONResponse(content={"detail": "Not authenticated"}, status_code=403)
 
-    if user["role"] != "admin":  # ✅ Ensure only admins can access
+    if user["role"] != "admin": 
         return JSONResponse(content={"detail": "Access denied, not an admin"}, status_code=403)
 
     return {"message": "User is an admin", "id": user["id"], "role": user["role"]}
 
+@app.get("/checkUnique/{modelName:path}")
+def checkUnique(modelName:str = Path(...), user: dict = Depends(authHandler.authWrapper)):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT modelName FROM models WHERE modelName = %s", (modelName,))
+        result = cursor.fetchone()
+        logger.info(result)
+        if result:
+            return False
+        return True
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error comparing string: {str(e)}")
 @app.get("/getIp")
 def getIp(modelName:str, user: dict = Depends(authHandler.authWrapper)):
     conn = get_db_connection()
@@ -214,7 +225,7 @@ async def upload_file(file: UploadFile = File(...)):
     file_url = upload_file_to_blob(file.filename, file_content)
     return {"message": "File uploaded successfully", "url": file_url}
 
-# 🔹 List Files in Azure Blob Storage
+# List Files in Azure Blob Storage
 @app.get("/list/")
 def list_files(userId, user: dict = Depends(authHandler.authWrapper)):
     """API function that returns only the user's files."""
@@ -231,7 +242,7 @@ def list_files(userId, user: dict = Depends(authHandler.authWrapper)):
 #   blobs = list_blobs()
 #    return {"files": blobs}
 
-# 🔹 Download a File
+# Download a File
 @app.get("/download/{file_name}")
 def download_file(file_name: str):
     try:
@@ -240,7 +251,7 @@ def download_file(file_name: str):
     except Exception:
         raise HTTPException(status_code=404, detail="File not found")
 
-# 🔹 Delete a File
+# Delete a File
 @app.delete("/delete/{file_name}")
 def delete_file(file_name: str):
     try:
@@ -265,45 +276,52 @@ async def predict(model_name: str, input_data: PredictionInput, user: dict = Dep
     """Run prediction using the uploaded model"""
     try:
         model = load_model(model_name)
-
+        requestDate = datetime.now().strftime("%c")
         if model_name.endswith(".pkl"):
-            # ✅ Scikit-Learn Model
+            # Scikit-Learn Model
             prediction = model.predict([list(input_data.data.values())]).tolist()
 
         
         elif model_name.endswith(".onnx"):
-    # ✅ ONNX Model
-            inputs_dict = input_data.data  # Assuming this is already a dict with needed keys
+    # ONNX Model
+            inputs_dict = input_data.data 
 
-            # ✅ Dynamically fetch model input names & data types
             ort_inputs = {}
             for input_tensor in model.get_inputs():
                 input_name = input_tensor.name  # Get input name
                 input_dtype = input_tensor.type  # Get expected ONNX dtype
                 print(f"Processing input: {input_name}, Expected Type: {input_dtype}")
 
-                # ✅ Match ONNX dtype to NumPy dtype
                 dtype_map = {
                     "tensor(int64)": np.int64,
                     "tensor(int32)": np.int32,
-                    "tensor(float)": np.float32,  # ✅ Fix for tensor(float)
+                    "tensor(float)": np.float32,  
                     "tensor(float32)": np.float32,
                     "tensor(float64)": np.float64
                 }
 
-                # ✅ Validate & assign dtype
                 np_dtype = dtype_map.get(input_dtype.lower())
                 if np_dtype is None:
                     raise ValueError(f"Unsupported ONNX input type: {input_dtype}")
 
-                # ✅ Convert input data dynamically
+                # Convert input data dynamically
                 if input_name in inputs_dict:
                     ort_inputs[input_name] = np.array(inputs_dict[input_name], dtype=np_dtype)
                 else:
                     raise ValueError(f"Missing expected input: {input_name}")
 
-            # ✅ Run inference
             prediction = model.run(None, ort_inputs)[0].tolist()
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT modelId FROM models WHERE modelName = %s", (model_name,))
+                result = cursor.fetchone()
+                if not result or not result.get('modelId'):
+                    raise HTTPException(status_code=404, detail="Model not found")
+                modelId = result['modelId']
+                cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId))
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error uploading logs into the database {str(e)}")
 
         else:
             raise HTTPException(status_code=400, detail="Invalid model format")
@@ -316,7 +334,7 @@ async def predict(model_name: str, input_data: PredictionInput, user: dict = Dep
 @app.get("/predict/{model_name}")
 async def get_model_input(model_name: str):
     try:
-        model = load_model(model_name)  # loads the file from Blob
+        model = load_model(model_name)  #loads the file from Blob
         extension = os.path.splitext(model_name)[-1].lower()
 
         if extension == ".onnx":
