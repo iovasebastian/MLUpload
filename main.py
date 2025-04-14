@@ -20,6 +20,7 @@ import numpy as np
 import logging
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
