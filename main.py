@@ -326,7 +326,10 @@ async def predict(model_name: str, input_data: PredictionInput, user: dict = Dep
                     raise HTTPException(status_code=404, detail="Model not found")
                 modelId = result['modelId']
                 cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId))
+                conn.commit()
+                conn.close()
             except Exception as e:
+                conn.rollback()
                 raise HTTPException(status_code=500, detail=f"Error uploading logs into the database {str(e)}")
 
         else:
