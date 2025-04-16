@@ -149,7 +149,7 @@ def getSecretCode(modelName : str):
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute("SELECT secretToken FROM models WHERE modelName = %s", (modelName,))
-        result = cursor.fetchone()['secretCode']
+        result = cursor.fetchone()['secretToken']
         return {"secretCode" : result}
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Error: {str(e)}")
