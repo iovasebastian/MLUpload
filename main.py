@@ -143,6 +143,17 @@ def logout():
 
     return response
 
+@app.get("/getSecretCode/{modelName}")
+def getSecretCode(modelName : str):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT secretToken FROM models WHERE modelName = %s", (modelName,))
+        result = cursor.fetchone()['secretCode']
+        return {"secretCode" : result}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Error: {str(e)}")
+
 @app.get("/check-admin")
 def check_admin(user: dict = Depends(authHandler.authWrapper)):
     if not user: 
