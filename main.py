@@ -36,7 +36,7 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PUT"], 
-    allow_headers=["Authorization", "Content-Type"], 
+    allow_headers=["Authorization", "Content-Type", "Secret-code"], 
 )
 
 JENKINS_URL = os.getenv("JENKINS_URL")
