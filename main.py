@@ -394,8 +394,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.get("/predict/{model_name}")
-async def get_model_input(model_name: str, request: Request):
-    secretCode = request.headers.get("Secret-code")
+async def get_model_input(model_name: str, secretCode: str = Header(alias="Secret-code")):
     if not secretCode:
         raise HTTPException(status_code=400, detail="Missing access code")
 
