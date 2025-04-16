@@ -6,17 +6,26 @@ import pickle
 import onnxruntime as ort
 import mysql
 import sys
+import logging
+logger = logging.getLogger("uvicorn")
+logger.setLevel(logging.INFO)
+
 # 🔹 Azure Storage Credentials
 AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=sebastianblobml;AccountKey=mVq1SpKr/Ezd3odD9iMEROZIcwlK+i/9xz8Pzn5AhhTfTg073jH9aZy01Nr9IxMK5s+yttHVYW3q+ASt6VrnFg==;EndpointSuffix=core.windows.net"
 CONTAINER_NAME = "blobcontainer"
 
+SQL_HOST = os.getenv("SQL_HOST")
+SQL_USER = os.getenv("SQL_USER")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+SQL_DATABASE = os.getenv("SQL_DATABASE")
+
 authHandler = AuthHandler()
 def get_db_connection():
     return mysql.connector.connect(
-        host="127.0.0.1",
-        user="root",
-        password="1234",
-        database="db1"
+        host= SQL_HOST,
+        user= SQL_USER,
+        password= SQL_PASSWORD,
+        database= SQL_DATABASE
     )
 # 🔹 Initialize Blob Service Client
 blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)

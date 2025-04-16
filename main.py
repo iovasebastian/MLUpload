@@ -11,6 +11,7 @@ from jwtFile import AuthHandler
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Request, Path
 from fastapi.responses import JSONResponse
+import secrets, string 
 from fastapi import Header
 import subprocess
 import requests
@@ -204,6 +205,12 @@ def get_jenkins_status(job_name: str):
 @app.post("/deploy")
 def deploy(model: str = Query(...), type: str = Query(...)):
     try:
+        name_of_model = model + '.' + type
+        randomString = ''.join(secrets.choice(string.ascii_letters + string.digits + '-_!?') for _ in range(24))
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("UPDATE models SET secretToken = %s WHERE modelName = %s",(randomString, name_of_model))
+        conn.commit()
         response = requests.post(
             JENKINS_URL,
             params={
@@ -216,12 +223,30 @@ def deploy(model: str = Query(...), type: str = Query(...)):
         if response.status_code == 201:
             return {"message": "Jenkins job triggered successfully"}
         else:
+            if conn:
+                conn.rollback()
             return JSONResponse(
                 status_code=response.status_code,
                 content={"error": response.text}
             )
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+    
+@app.get("/getLogs/{modelName}")
+async def getLogs(modelName: str):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT ml.actionName, ml.actionDescription, ml.actionTime, m.modelName
+            FROM modelLogs ml
+            JOIN models m ON ml.modelId = m.modelId
+            WHERE m.modelName = %s                
+        """, (modelName,))
+        logs = cursor.fetchall()
+        return {"logs" : logs, "modelName": modelName}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error" : str(e)})
 
 #AZURE CRUD
 
@@ -261,24 +286,40 @@ def download_file(file_name: str):
 @app.delete("/delete/{file_name}")
 def delete_file(file_name: str):
     try:
-        message = delete_blob(file_name)
-        model_name = file_name.split('.')[0].lower()
-        subprocess.run(["kubectl", "delete", "deployment", f"{model_name}-deployment"], check=False)
-        subprocess.run(["kubectl", "delete", "svc", f"{model_name}-service"], check=False)
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT modelId FROM models WHERE modelName = %s", (file_name,))
+        modelId = cursor.fetchone()['modelId']
+        cursor.execute("DELETE FROM modelLogs WHERE modelId = %s", (modelId,))
+        conn.commit()
         query = "DELETE FROM models WHERE modelName = %s"
         cursor.execute(query, (file_name,))
         conn.commit()
         cursor.close()
-        conn.close()
+        message = delete_blob(file_name)
+        model_name = file_name.split('.')[0].lower()
+        subprocess.run(["kubectl", "delete", "deployment", f"{model_name}-deployment"], check=False)
+        subprocess.run(["kubectl", "delete", "svc", f"{model_name}-service"], check=False)
         return {"message": message, "dbmessage": f"✅ DB entry for '{model_name}' deleted."}
-    except Exception:
-        raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=404, detail=f"File not found detail : {str(e)}")
     
 #Prediction with onxx and pickle
 @app.post("/predict/{model_name:path}")
-async def predict(model_name: str, input_data: PredictionInput, user: dict = Depends(authHandler.authWrapper)):
+async def predict(model_name: str, input_data: PredictionInput, secretCode: str = Header(None)):
+    if not secretCode:
+        raise HTTPException(status_code=400, detail="Missing access code")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM models WHERE secretToken = %s", (secretCode,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not result:
+        raise HTTPException(status_code=403, detail="Access denied")
     """Run prediction using the uploaded model"""
     try:
         model = load_model(model_name)
@@ -341,7 +382,19 @@ async def predict(model_name: str, input_data: PredictionInput, user: dict = Dep
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.get("/predict/{model_name}")
-async def get_model_input(model_name: str):
+async def get_model_input(model_name: str, secretCode: str = Header(None)):
+    if not secretCode:
+        raise HTTPException(status_code=400, detail="Missing access code")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM models WHERE secretToken = %s", (secretCode,))
+    result = cursor.fetchone()
+    if not result:
+        raise HTTPException(status_code=403, detail="Access denied")
+    cursor.close()
+    conn.close()
+
     try:
         model = load_model(model_name)  #loads the file from Blob
         extension = os.path.splitext(model_name)[-1].lower()
