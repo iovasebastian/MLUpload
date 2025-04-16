@@ -318,7 +318,8 @@ def delete_file(file_name: str):
     
 #Prediction with onxx and pickle
 @app.post("/predict/{model_name:path}")
-async def predict(model_name: str, input_data: PredictionInput, secretCode: str = Header(None)):
+async def predict(model_name: str, input_data: PredictionInput, request: Request):
+    secretCode = request.headers.get("Secret-code")
     if not secretCode:
         raise HTTPException(status_code=400, detail="Missing access code")
 
