@@ -401,8 +401,8 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
                 conn.commit()
                 cursor.close()
                 conn.close()
-            except Exception as log_error:
-                print(f"⚠️ Failed to log error in DB: {log_error}")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error uploading logs into the database {str(e)}")
             raise HTTPException(status_code=400, detail="Invalid model format")
 
         return {"model": model_name, "prediction": prediction}
@@ -423,8 +423,8 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
             conn.commit()
             cursor.close()
             conn.close()
-        except Exception as log_error:
-            print(f"⚠️ Failed to log error in DB: {log_error}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error uploading logs into the database {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
     
