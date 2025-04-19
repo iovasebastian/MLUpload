@@ -367,7 +367,18 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
                 if input_name in inputs_dict:
                     ort_inputs[input_name] = np.array(inputs_dict[input_name], dtype=np_dtype)
                 else:
+                    conn = get_db_connection()
+                    cursor = conn.cursor(dictionary=True)
+                    cursor.execute("SELECT modelId FROM models WHERE modelName = %s", (model_name,))
+                    result = cursor.fetchone()
+                    if not result or not result.get('modelId'):
+                        raise HTTPException(status_code=404, detail="Model not found")
+                    modelId = result['modelId']
+                    cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Succeeded"))
+                    conn.commit()
+                    conn.close()
                     raise ValueError(f"Missing expected input: {input_name}")
+
 
             prediction = model.run(None, ort_inputs)[0].tolist()
             try:
