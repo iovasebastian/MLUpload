@@ -398,7 +398,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
     except Exception as e:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed"))
+        cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed"))
         conn.commit()
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
