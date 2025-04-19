@@ -374,7 +374,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
                     if not result or not result.get('modelId'):
                         raise HTTPException(status_code=404, detail="Model not found")
                     modelId = result['modelId']
-                    cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Succeeded"))
+                    cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed 1"))
                     conn.commit()
                     conn.close()
                     raise ValueError(f"Missing expected input: {input_name}")
@@ -407,7 +407,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
                 cursor.execute("""
                     INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status)
                     VALUES (%s, %s, %s, %s, %s)
-                """, ("POST", "Post request", safe_date, safe_model_id, "Failed"))
+                """, ("POST", "Post request", safe_date, safe_model_id, "Failed 2"))
 
                 conn.commit()
                 cursor.close()
