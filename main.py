@@ -419,23 +419,6 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
         return {"model": model_name, "prediction": prediction}
 
     except Exception as e:
-        try:
-            conn = get_db_connection()
-            cursor = conn.cursor(dictionary=True)
-
-            safe_model_id = modelId if 'modelId' in locals() else None
-            safe_date = requestDate if 'requestDate' in locals() else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            cursor.execute("""
-                INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status)
-                VALUES (%s, %s, %s, %s, %s)
-            """, ("POST", "Post request", safe_date, safe_model_id, "Failed"))
-
-            conn.commit()
-            cursor.close()
-            conn.close()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error uploading logs into the database {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
     
