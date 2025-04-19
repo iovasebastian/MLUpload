@@ -378,7 +378,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
                 if not result or not result.get('modelId'):
                     raise HTTPException(status_code=404, detail="Model not found")
                 modelId = result['modelId']
-                cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId))
+                cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Succeeded"))
                 conn.commit()
                 conn.close()
             except Exception as e:
@@ -386,12 +386,23 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
                 raise HTTPException(status_code=500, detail=f"Error uploading logs into the database {str(e)}")
 
         else:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed"))
+            conn.commit()
+            conn.close()
             raise HTTPException(status_code=400, detail="Invalid model format")
 
         return {"model": model_name, "prediction": prediction}
 
     except Exception as e:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed"))
+        conn.commit()
+        conn.close()
         raise HTTPException(status_code=500, detail=str(e))
+
     
 @app.get("/predict/{model_name}")
 async def get_model_input(model_name: str, request:Request):
