@@ -26,6 +26,7 @@ load_dotenv()
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
 logger.info("NEW MODEL !!!!!!!!!!")
+modelId_GLOBAL = None
 app = FastAPI()
 authHandler = AuthHandler()
 app.add_middleware(
@@ -249,7 +250,7 @@ async def getLogs(modelName: str):
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute("""
-            SELECT ml.actionName, ml.actionDescription, ml.actionTime, m.modelName
+            SELECT ml.actionName, ml.actionDescription, ml.actionTime, m.modelName, ml.status
             FROM modelLogs ml
             JOIN models m ON ml.modelId = m.modelId
             WHERE m.modelName = %s                
@@ -378,6 +379,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
                 if not result or not result.get('modelId'):
                     raise HTTPException(status_code=404, detail="Model not found")
                 modelId = result['modelId']
+                modelId_GLOBAL = modelId
                 cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Succeeded"))
                 conn.commit()
                 conn.close()
@@ -388,7 +390,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
         else:
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed"))
+            cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId_GLOBAL, "Failed"))
             conn.commit()
             conn.close()
             raise HTTPException(status_code=400, detail="Invalid model format")
@@ -398,7 +400,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
     except Exception as e:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed"))
+        cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId_GLOBAL, "Failed"))
         conn.commit()
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
