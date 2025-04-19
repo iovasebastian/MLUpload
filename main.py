@@ -335,7 +335,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
     """Run prediction using the uploaded model"""
     try:
         model = load_model(model_name)
-        requestDate = datetime.now().strftime("%c")
+        requestDate = datetime.now()
         if model_name.endswith(".pkl"):
             # Scikit-Learn Model
             prediction = model.predict([list(input_data.data.values())]).tolist()
@@ -378,7 +378,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
                 if not result or not result.get('modelId'):
                     raise HTTPException(status_code=404, detail="Model not found")
                 modelId = result['modelId']
-                cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Succeeded"))
+                cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Succeeded"))
                 conn.commit()
                 conn.close()
             except Exception as e:
@@ -388,7 +388,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
         else:
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed"))
+            cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Failed"))
             conn.commit()
             conn.close()
             raise HTTPException(status_code=400, detail="Invalid model format")
