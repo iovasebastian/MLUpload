@@ -83,6 +83,8 @@ def load_model(model_name: str):
         # 🔹 Load Model
         if model_name.endswith(".pkl"):
             model = load(download_path)
+            with open(download_path, "rb") as f:
+                logger.info(f.read(5))
         elif model_name.endswith(".onnx"):
             model = ort.InferenceSession(download_path)
         else:
