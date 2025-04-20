@@ -425,6 +425,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
 @app.get("/predict/{model_name}")
 async def get_model_input(model_name: str, request:Request):
     secretCode = request.headers.get('secret-code')
+    requestDate = datetime.now()
     logger.info(f"secretCode: {secretCode}")
     if not secretCode:
         raise HTTPException(status_code=400, detail="Missing access code")
@@ -446,6 +447,17 @@ async def get_model_input(model_name: str, request:Request):
             # Handle ONNX model
             input_details = [{"name": input.name, "shape": input.shape} for input in model.get_inputs()]
             output_details = [{"name": output.name, "shape": output.shape} for output in model.get_outputs()]
+
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT modelId FROM models WHERE modelName = %s", (model_name,))
+            result = cursor.fetchone()
+            if not result or not result.get('modelId'):
+                raise HTTPException(status_code=404, detail="Model not found")
+            modelId = result['modelId']
+            cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("GET", "Get request", requestDate, modelId, "Succeeded"))
+            conn.commit()
+            conn.close()
 
             return {
                 "type": "onnx",
@@ -470,5 +482,15 @@ async def get_model_input(model_name: str, request:Request):
             raise Exception(f"Unsupported model extension: {extension}")
 
     except Exception as e:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT modelId FROM models WHERE modelName = %s", (model_name,))
+        result = cursor.fetchone()
+        if not result or not result.get('modelId'):
+            raise HTTPException(status_code=404, detail="Model not found")
+        modelId = result['modelId']
+        cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("GET", "Get request", requestDate, modelId, "Failed, error getting model inputs"))
+        conn.commit()
+        conn.close()
         raise HTTPException(status_code=500, detail=f"Error extracting model details: {str(e)}")
     
