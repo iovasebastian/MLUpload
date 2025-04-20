@@ -7,6 +7,7 @@ import onnxruntime as ort
 import mysql
 import sys
 import logging
+from joblib import load 
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
 
@@ -81,8 +82,7 @@ def load_model(model_name: str):
 
         # 🔹 Load Model
         if model_name.endswith(".pkl"):
-            with open(download_path, "rb") as f:
-                model = pickle.load(f)
+            model = load(download_path)
         elif model_name.endswith(".onnx"):
             model = ort.InferenceSession(download_path)
         else:
