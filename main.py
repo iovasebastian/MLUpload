@@ -338,11 +338,9 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
         requestDate = datetime.now()
         if model_name.endswith(".pkl"):
             # Scikit-Learn Model
-            prediction = model.predict([list(input_data.data.values())]).tolist()
-
-        
+            prediction = model.predict([list(input_data.data.values())]).tolist() 
         elif model_name.endswith(".onnx"):
-    # ONNX Model
+                # ONNX Model
             inputs_dict = input_data.data 
 
             ort_inputs = {}
@@ -395,7 +393,6 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
             except Exception as e:
                 conn.rollback()
                 raise HTTPException(status_code=500, detail=f"Error uploading logs into the database {str(e)}")
-
         else:
             try:
                 conn = get_db_connection()

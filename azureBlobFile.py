@@ -82,9 +82,10 @@ def load_model(model_name: str):
 
         # 🔹 Load Model
         if model_name.endswith(".pkl"):
-            model = load(download_path)
             with open(download_path, "rb") as f:
-                logger.info(f.read(5))
+                header = f.read(5)
+                logger.info(f"First 5 bytes of model file: {list(header)}")  # will print like [128, 4, 149, ...]
+            model = load(download_path)
         elif model_name.endswith(".onnx"):
             model = ort.InferenceSession(download_path)
         else:
