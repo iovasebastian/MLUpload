@@ -338,7 +338,21 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
         requestDate = datetime.now()
         if model_name.endswith(".pkl"):
             # Scikit-Learn Model
-            prediction = model.predict([list(input_data.data.values())]).tolist() 
+            prediction = model.predict([list(input_data.data.values())]).tolist()
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT modelId FROM models WHERE modelName = %s", (model_name,))
+                result = cursor.fetchone()
+                if not result or not result.get('modelId'):
+                    raise HTTPException(status_code=404, detail="Model not found")
+                modelId = result['modelId']
+                cursor.execute("INSERT INTO modelLogs (actionName, actionDescription, actionTime, modelId, status) VALUES (%s, %s, %s, %s, %s)", ("POST", "Post request", requestDate, modelId, "Succeeded"))
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                conn.rollback()
+                raise HTTPException(status_code=500, detail=f"Error uploading logs into the database {str(e)}")
         elif model_name.endswith(".onnx"):
                 # ONNX Model
             inputs_dict = input_data.data 
