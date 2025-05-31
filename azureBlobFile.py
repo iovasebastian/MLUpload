@@ -33,9 +33,7 @@ blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_
 container_client = blob_service_client.get_container_client(CONTAINER_NAME)
 
 def upload_file_to_blob(file_name: str, file_content: bytes):
-    """
-    Uploads a file to Azure Blob Storage.
-    """
+    #Uploads a file to Azure Blob Storage
     try:
         blob_client = container_client.get_blob_client(file_name)
         blob_client.upload_blob(file_content)
@@ -72,19 +70,19 @@ def delete_blob(file_name: str):
 def load_model(model_name: str):
     """Downloads and loads the model from Azure Blob Storage"""
     try:
-        # 🔹 Get Blob Client
+        # Get Blob Client
         blob_client = container_client.get_blob_client(model_name)
         
-        # 🔹 Download Model to Temporary File
+        # Download Model to Temporary File
         download_path = f"/tmp/{model_name}"
         with open(download_path, "wb") as f:
             f.write(blob_client.download_blob().readall())
 
-        # 🔹 Load Model
+        # Load Model
         if model_name.endswith(".pkl"):
             with open(download_path, "rb") as f:
                 header = f.read(5)
-                logger.info(f"First 5 bytes of model file: {list(header)}")  # will print like [128, 4, 149, ...]
+                logger.info(f"First 5 bytes of model file: {list(header)}")
             model = load(download_path)
         elif model_name.endswith(".onnx"):
             model = ort.InferenceSession(download_path)

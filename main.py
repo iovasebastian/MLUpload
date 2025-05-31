@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Request, Response, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import mysql.connector
+from kubernetes import client, config
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import UploadFile, File
 from azureBlobFile import list_blobs_admin, upload_file_to_blob, list_blobs, download_blob, delete_blob, load_model, list_blobs_per_user
@@ -86,6 +87,7 @@ def create_user(user: User):
     finally:
         cursor.close()
         conn.close()
+
 @app.post("/login")
 def login(user: UserLogin):
     conn = get_db_connection()
@@ -117,6 +119,20 @@ def login(user: UserLogin):
     finally:
         cursor.close()
         conn.close()
+
+@app.get("/checkLimit")
+def checkLimit():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM models")
+        result = cursor.fetchall()
+        number = len(result)
+        if number > 2:
+            return True
+        return False
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to check {str(e)}")
 
 @app.post("/create")
 def addMetaData(metaData: MetaDataFile):
@@ -177,6 +193,7 @@ def checkUnique(modelName:str = Path(...), user: dict = Depends(authHandler.auth
         return True
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error comparing string: {str(e)}")
+    
 @app.get("/getIp")
 def getIp(modelName:str, user: dict = Depends(authHandler.authWrapper)):
     conn = get_db_connection()
@@ -293,6 +310,28 @@ def download_file(file_name: str):
     except Exception:
         raise HTTPException(status_code=404, detail="File not found")
 
+@app.get("/getResources")
+def getResources():
+    custom_api = client.CustomObjectsApi()
+    metrics = custom_api.list_cluster_custom_object(
+        group="metrics.k8s.io",
+        version="v1beta1",
+        plural="pods"
+    )
+    
+    table = []
+    for pod in metrics['items']:
+        pod_name = pod['metadata']['name']
+        for container in pod['containers']:
+            table.append({
+                "pod": pod_name,
+                "container": container['name'],
+                "cpu": container['usage']['cpu'],
+                "memory": container['usage']['memory']
+            })
+    return table
+
+
 # Delete a File
 @app.delete("/delete/{file_name}")
 def delete_file(file_name: str):
@@ -329,7 +368,6 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
     result = cursor.fetchone()
     cursor.close()
     conn.close()
-
     if not result:
         raise HTTPException(status_code=403, detail="Access denied")
     """Run prediction using the uploaded model"""
