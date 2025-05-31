@@ -48,6 +48,13 @@ SQL_USER = os.getenv("SQL_USER")
 SQL_PASSWORD = os.getenv("SQL_PASSWORD")
 SQL_DATABASE = os.getenv("SQL_DATABASE")
 
+try:
+    config.load_incluster_config()
+except:
+    config.load_kube_config()
+
+custom_api = client.CustomObjectsApi()
+
 def get_db_connection():
     return mysql.connector.connect(
         host= SQL_HOST,
@@ -312,7 +319,6 @@ def download_file(file_name: str):
 
 @app.get("/getResources")
 def getResources():
-    custom_api = client.CustomObjectsApi()
     metrics = custom_api.list_cluster_custom_object(
         group="metrics.k8s.io",
         version="v1beta1",
