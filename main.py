@@ -379,7 +379,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
     """Run prediction using the uploaded model"""
     try:
         model = load_model(model_name)
-        time = datetime.datetime.now()
+        time = datetime.now()
         requestDate = time.strftime("%c")
         if model_name.endswith(".pkl"):
             # Scikit-Learn Model
@@ -481,7 +481,7 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
 @app.get("/predict/{model_name}")
 async def get_model_input(model_name: str, request:Request):
     secretCode = request.headers.get('secret-code')
-    time = datetime.datetime.now()
+    time = datetime.now()
     requestDate = time.strftime("%c")
     logger.info(f"secretCode: {secretCode}")
     if not secretCode:
