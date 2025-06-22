@@ -379,7 +379,8 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
     """Run prediction using the uploaded model"""
     try:
         model = load_model(model_name)
-        requestDate = datetime.now()
+        time = datetime.datetime.now()
+        requestDate = time.strftime("%c")
         if model_name.endswith(".pkl"):
             # Scikit-Learn Model
             prediction = model.predict([list(input_data.data.values())]).tolist()
@@ -480,7 +481,8 @@ async def predict(model_name: str, input_data: PredictionInput, request: Request
 @app.get("/predict/{model_name}")
 async def get_model_input(model_name: str, request:Request):
     secretCode = request.headers.get('secret-code')
-    requestDate = datetime.now()
+    time = datetime.datetime.now()
+    requestDate = time.strftime("%c")
     logger.info(f"secretCode: {secretCode}")
     if not secretCode:
         raise HTTPException(status_code=400, detail="Missing access code")
